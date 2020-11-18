@@ -13,63 +13,77 @@
 #include "OpenQR.h"
 
 // main
-void main(void)
+int main(int argc, char * argv[])
 {
-	// object
-	OpenQR openQR;
+    std::string fname, fout;
+    if (argc > 1) {
+        fname = std::string(argv[1]);
+    }
+    if (argc == 3) {
+        fout = std::string(argv[2]);
+    }
+    // object
+    OpenQR openQR;
 
-	// vals
-	clock_t timeStarting;		// ms timer
-	const int mode = 1;			// segmentation mode(1 = without transformation, 2 = with transformation)
+    // vals
+    clock_t timeStarting; // ms timer
+    const int mode = 1;   // segmentation mode(1 = without transformation, 2 = with transformation)
 
-	// set thread num
-	// If you want to set thread, use this function
-	// openQR.SetThreadNum(threadNum);
+    // set thread num
+    // If you want to set thread, use this function
+    // openQR.SetThreadNum(threadNum);
 
-	// open camera
-	if (openQR.OpenCamera(1920, 1080) == -1)	// open camera 1920 x 1080 resolution
-		return;
+    // open camera
+    if (openQR.OpenCamera(1920, 1080) == -1) // open camera 1920 x 1080 resolution
+        return -1;
 
-	// loop
-	while (1)
-	{
-		// ESC key detection(END condition)
-		if (openQR.CheckEscKey() == 1)
-			break;
+    // loop
+    while (1)
+    {
+        // ESC key detection(END condition)
+        if (openQR.CheckEscKey() == 1)
+            break;
 
-		// Check reading error
-		if (openQR.ReadFrame() == -1)
-			return;
+        // Check reading error
+        if (openQR.ReadFrame(fname) == -1)
+            return -1;
 
-		// Set timer
-		timeStarting = clock();
+        // Set timer
+        timeStarting = clock();
 
-		// Detect QR codes
-		openQR.FindExpectedQrcodes();
+        // Detect QR codes
+        openQR.FindExpectedQrcodes();
 
-		// Segment detected QR codes
-		if (mode == 1)
-			openQR.SegmentWithNoTransform();
-		else if(mode == 2)
-			openQR.SegmentWithTransform();
+        // Segment detected QR codes
+        if (mode == 1)
+            openQR.SegmentWithNoTransform();
+        else if (mode == 2)
+            openQR.SegmentWithTransform();
 
-		// Decoding(OpenCV need to re-detect...)
-		openQR.DetectAndDecodeQrcodeWithOpenCV();
+        // Decoding(OpenCV need to re-detect...)
+        openQR.DetectAndDecodeQrcodeWithOpenCV();
 
-		// Show
-		// openQR.DrawExpectedQrcodesBoundBox();
-		// openQR.DrawDecodedQrcodesOnNoTransform(); // this function works only on SegmentWithNoTransform()
-		// openQR.DrawDecodingFailed();
-		openQR.DrawExpectedQrcodes();
-		openQR.DrawDecodedStr();
-		openQR.DrawText(cv::format("Processing: %.3f sec/frame", ((double)clock() - (double)timeStarting) / 1000.0), cv::Point(10, 20));
-		openQR.DrawText(cv::format("* QR codes: %d", openQR.GetExpectedNum()), cv::Point(10, 40));
-		openQR.ShowOutput();
-		
-		// Reset data
-		openQR.Reset();
+        // Show
+        // openQR.DrawExpectedQrcodesBoundBox();
+        // openQR.DrawDecodedQrcodesOnNoTransform(); // this function works only on SegmentWithNoTransform()
+        // openQR.DrawDecodingFailed();
+        openQR.DrawExpectedQrcodes();
+        openQR.DrawDecodedStr();
+        openQR.DrawText(cv::format("Processing: %.3f sec/frame", ((double)clock() - (double)timeStarting) / 1000.0), cv::Point(10, 20));
+        openQR.DrawText(cv::format("* QR codes: %d", openQR.GetExpectedNum()), cv::Point(10, 40));
+        openQR.ShowOutput(fout);
 
-	} // while()
+        // Reset data
+        openQR.Reset();
 
-}	// main()
+        if (fname.length()) {
+            cv::waitKey();
+            cv::destroyAllWindows();
+            break;
+        }
 
+    } // while()
+
+    return 0;
+
+} // main()
