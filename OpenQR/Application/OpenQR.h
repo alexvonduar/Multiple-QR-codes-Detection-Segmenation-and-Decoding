@@ -156,4 +156,6 @@ public:
     void DrawDecodedStr();
     void DrawText(cv::String str, cv::Point pos);
     void ShowOutput(const std::string& fout = std::string());
+
+    void GetResults(std::vector<cv::String>& infos, std::vector<std::vector<cv::Point2f>>& points);
 };

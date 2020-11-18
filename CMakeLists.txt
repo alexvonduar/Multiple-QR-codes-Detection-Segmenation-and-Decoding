@@ -44,7 +44,7 @@ include_directories(
 
 set(OPENQR_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/OpenQR/Application/OpenQR.cpp)
 
-add_library(openqr ${OPENQR_SOURCES})
+add_library(openqr SHARED ${OPENQR_SOURCES})
 TARGET_LINK_LIBRARIES(openqr ${OpenCV_LIBRARIES})
 
 add_executable(test_openqr ${CMAKE_CURRENT_SOURCE_DIR}/OpenQR/Application/main.cpp)

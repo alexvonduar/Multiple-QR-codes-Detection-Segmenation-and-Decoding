@@ -1131,6 +1131,19 @@ void OpenQR::DrawDecodedStr()
     }
 }
 
+void OpenQR::GetResults(std::vector<cv::String>& infos, std::vector<std::vector<cv::Point2f>>& points)
+{
+        for (int i = 0; i < qrcodes.size(); i++)
+        {
+            if (qrcodes[i].flagDecoded) {
+                infos.emplace_back(qrcodes[i].str);
+            } else {
+                infos.emplace_back(cv::String());
+            }
+            points.emplace_back(std::vector<cv::Point2f>{cv::Point2f(qrcodes[i].expectedpose.ptTopL), cv::Point2f(qrcodes[i].expectedpose.ptTopR), cv::Point2f(qrcodes[i].expectedpose.ptBotR), cv::Point2f(qrcodes[i].expectedpose.ptBotL)});
+        } // for
+}
+
 void OpenQR::ShowOutput(const std::string& fout)
 {
     if (fout.length()) {
