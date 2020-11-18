@@ -2,6 +2,8 @@
 
 #include "OpenQR.h"
 
+#include "quirc_detector.hpp"
+
 OpenQR::OpenQR()
 {
     threadNum = GetCoresSize();
@@ -716,8 +718,9 @@ void OpenQR::ConvertGray()
 
 void OpenQR::ConvertBin()
 {
-    cv::threshold(imgGray, imgBin, 50, 255, cv::THRESH_BINARY);
-    const auto threshold = cv::threshold(imgBin, imgBin, 0, 255, cv::THRESH_OTSU);
+    cv::threshold(imgGray, imgBin, 48, 255, cv::THRESH_BINARY);
+    //imgGray.copyTo(imgBin);
+    //const auto threshold = cv::threshold(imgBin, imgBin, 0, 255, cv::THRESH_OTSU);
 }
 
 void OpenQR::Morphology()
@@ -1035,9 +1038,27 @@ void OpenQR::DetectAndDecodeQrcodeWithOpenCV()
 #pragma omp for
         for (int i = 0; i < qrcodes.size(); i++)
         {
+#if 1
+            std::vector<cv::String> infos;
+            std::vector<std::vector<cv::Point2f>> points;
+            quirc_detect(qrcodes[i].image, qrcodes[i].image.cols * 2, infos, points, false);
+            if (infos.size() == 1 and infos[0].length() > 0)
+            {
+                qrcodes[i].flagDecoded = true;
+                qrcodes[i].str = infos[0];
+
+                // this points works only SegmentWithNoTransform()
+                qrcodes[i].detectedPose[0] = cv::Point2i(points[0][0].x + qrcodes[i].boundBox.x - MARGIN_SIZE_OF_QRCODE, points[0][0].y + qrcodes[i].boundBox.y - MARGIN_SIZE_OF_QRCODE);
+                qrcodes[i].detectedPose[1] = cv::Point2i(points[0][1].x + qrcodes[i].boundBox.x - MARGIN_SIZE_OF_QRCODE, points[0][1].y + qrcodes[i].boundBox.y - MARGIN_SIZE_OF_QRCODE);
+                qrcodes[i].detectedPose[2] = cv::Point2i(points[0][2].x + qrcodes[i].boundBox.x - MARGIN_SIZE_OF_QRCODE, points[0][2].y + qrcodes[i].boundBox.y - MARGIN_SIZE_OF_QRCODE);
+                qrcodes[i].detectedPose[3] = cv::Point2i(points[0][3].x + qrcodes[i].boundBox.x - MARGIN_SIZE_OF_QRCODE, points[0][3].y + qrcodes[i].boundBox.y - MARGIN_SIZE_OF_QRCODE);
+            }
+#else
             cv::QRCodeDetector qrDecoder = cv::QRCodeDetector();
             cv::Mat bbox, rectifiedImage;
             std::string data = qrDecoder.detectAndDecode(qrcodes[i].image, bbox, rectifiedImage);
+            //cv::imshow("image", qrcodes[i].image);
+            //cv::waitKey();
             if (data.length() > 0)
             {
                 qrcodes[i].flagDecoded = true;
@@ -1049,6 +1070,7 @@ void OpenQR::DetectAndDecodeQrcodeWithOpenCV()
                 qrcodes[i].detectedPose[2] = cv::Point2i(bbox.at<float>(2, 0) + qrcodes[i].boundBox.x - MARGIN_SIZE_OF_QRCODE, bbox.at<float>(2, 1) + qrcodes[i].boundBox.y - MARGIN_SIZE_OF_QRCODE);
                 qrcodes[i].detectedPose[3] = cv::Point2i(bbox.at<float>(3, 0) + qrcodes[i].boundBox.x - MARGIN_SIZE_OF_QRCODE, bbox.at<float>(3, 1) + qrcodes[i].boundBox.y - MARGIN_SIZE_OF_QRCODE);
             }
+#endif
         }
     }
 }
@@ -1131,25 +1153,30 @@ void OpenQR::DrawDecodedStr()
     }
 }
 
-void OpenQR::GetResults(std::vector<cv::String>& infos, std::vector<std::vector<cv::Point2f>>& points)
+void OpenQR::GetResults(std::vector<cv::String> &infos, std::vector<std::vector<cv::Point2f>> &points)
 {
-        for (int i = 0; i < qrcodes.size(); i++)
+    for (int i = 0; i < qrcodes.size(); i++)
+    {
+        if (qrcodes[i].flagDecoded)
         {
-            if (qrcodes[i].flagDecoded) {
-                infos.emplace_back(qrcodes[i].str);
-            } else {
-                infos.emplace_back(cv::String());
-            }
-            points.emplace_back(std::vector<cv::Point2f>{cv::Point2f(qrcodes[i].expectedpose.ptTopL), cv::Point2f(qrcodes[i].expectedpose.ptTopR), cv::Point2f(qrcodes[i].expectedpose.ptBotR), cv::Point2f(qrcodes[i].expectedpose.ptBotL)});
-        } // for
+            infos.emplace_back(qrcodes[i].str);
+        }
+        else
+        {
+            infos.emplace_back(cv::String());
+        }
+        points.emplace_back(std::vector<cv::Point2f>{cv::Point2f(qrcodes[i].expectedpose.ptTopL), cv::Point2f(qrcodes[i].expectedpose.ptTopR), cv::Point2f(qrcodes[i].expectedpose.ptBotR), cv::Point2f(qrcodes[i].expectedpose.ptBotL)});
+    } // for
 }
 
-void OpenQR::ShowOutput(const std::string& fout)
+void OpenQR::ShowOutput(const std::string &fout)
 {
-    if (fout.length()) {
+    if (fout.length())
+    {
         cv::imwrite(fout, imgOutput);
     }
-    if (imgOutput.rows > 960) {
+    if (imgOutput.rows > 960)
+    {
         const auto scale = 960. / imgOutput.rows;
         cv::resize(imgOutput, imgOutput, cv::Size(), scale, scale, cv::INTER_AREA);
     }
